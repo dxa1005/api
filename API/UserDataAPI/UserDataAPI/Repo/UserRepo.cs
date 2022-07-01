@@ -12,6 +12,7 @@ using Dapper;
 using Azure.Identity;
 using Azure.Security.KeyVault.Secrets;
 using Azure.Core;
+using Microsoft.Extensions.Configuration;
 //using System.Web.Script.Serialization;
 
 namespace UserDataAPI.Repo
@@ -19,10 +20,12 @@ namespace UserDataAPI.Repo
     public class UserRepo: IUserRepo
     {
         private readonly UserDbContext _userContext;
+         private readonly IConfiguration Configuration;
 
-        public UserRepo(UserDbContext userContext)
+        public UserRepo(UserDbContext userContext, IConfiguration configuration)
         {
             _userContext = userContext;
+            Configuration = configuration;
         }
         public async Task<List<User>> GetUsers()
         {
@@ -41,7 +44,7 @@ namespace UserDataAPI.Repo
         {           
           
             string res=null;
-            var connectionString = "Data Source=migrationpoc1.database.windows.net; Initial Catalog=migrationpoc; Authentication=Active Directory Default";
+            var connectionString = Configuration["ConnectionStrings:UsersDbConnectionString"];
 
 
             using (SqlConnection con = new SqlConnection(connectionString))
@@ -69,6 +72,7 @@ namespace UserDataAPI.Repo
             string secretValue = null;
             try
             {
+                var secretName = Configuration["KeyVault:SecretName"];
                 SecretClientOptions options = new SecretClientOptions()
                 {
                     Retry =        
@@ -81,7 +85,7 @@ namespace UserDataAPI.Repo
                 };
                 var client = new SecretClient(new Uri("https://client-keyvault.vault.azure.net/"), new DefaultAzureCredential(), options);
 
-                KeyVaultSecret secret = client.GetSecret("migrationsecret");
+                KeyVaultSecret secret = client.GetSecret(secretName);
 
                 secretValue = secret.Value;
                 return secretValue;
